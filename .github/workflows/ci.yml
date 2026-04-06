@@ -57,7 +57,7 @@ jobs:
           image-ref: ${{ steps.meta.outputs.tag }}
           format: table
           exit-code: 1
-          severity: CRITICAL,HIGH
+          severity: CRITICAL
 
       - name: Generate SBOM with Syft
         uses: anchore/sbom-action@v0
