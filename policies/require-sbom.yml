@@ -1,0 +1,23 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-sbom-annotation
+  annotations:
+    policies.kyverno.io/title: Require SBOM Annotation
+    policies.kyverno.io/description: Pods must have an SBOM annotation indicating the SBOM was generated
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: check-sbom-annotation
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [ml-serving]
+      validate:
+        message: "Pods must have annotation 'sbom/generated: true'"
+        pattern:
+          metadata:
+            annotations:
+              sbom/generated: "true"

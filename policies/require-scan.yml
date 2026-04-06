@@ -1,0 +1,23 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: require-vulnerability-scan
+  annotations:
+    policies.kyverno.io/title: Require Vulnerability Scan
+    policies.kyverno.io/description: Images must come from GHCR and be scanned via CI pipeline
+spec:
+  validationFailureAction: Enforce
+  background: false
+  rules:
+    - name: check-image-registry
+      match:
+        any:
+          - resources:
+              kinds: [Pod]
+              namespaces: [ml-serving]
+      validate:
+        message: "Images must be from ghcr.io/r055le/"
+        pattern:
+          spec:
+            containers:
+              - image: "ghcr.io/r055le/*"
