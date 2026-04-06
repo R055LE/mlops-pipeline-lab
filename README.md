@@ -1,4 +1,4 @@
-# mlops-pipeline-lab
+# MLOps Pipeline Lab
 
 Production-grade MLOps deployment pipeline demonstrating infrastructure engineering discipline applied to ML workloads. Takes a pre-trained HuggingFace sentiment analysis model and wraps it with container hardening, CI/CD automation, GitOps deployment, observability, and policy enforcement.
 
