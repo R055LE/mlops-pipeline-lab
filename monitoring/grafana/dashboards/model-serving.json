@@ -1,0 +1,79 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "targets": [
+        {
+          "expr": "rate(requests_total{endpoint=\"/predict\"}[5m])",
+          "legendFormat": "{{method}} {{status_code}}"
+        }
+      ]
+    },
+    {
+      "title": "Request Latency (p50 / p95 / p99)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, rate(request_latency_seconds_bucket{endpoint=\"/predict\"}[5m]))",
+          "legendFormat": "p50"
+        },
+        {
+          "expr": "histogram_quantile(0.95, rate(request_latency_seconds_bucket{endpoint=\"/predict\"}[5m]))",
+          "legendFormat": "p95"
+        },
+        {
+          "expr": "histogram_quantile(0.99, rate(request_latency_seconds_bucket{endpoint=\"/predict\"}[5m]))",
+          "legendFormat": "p99"
+        }
+      ]
+    },
+    {
+      "title": "Predictions by Label",
+      "type": "piechart",
+      "gridPos": { "h": 8, "w": 8, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "increase(predictions_total[1h])",
+          "legendFormat": "{{label}}"
+        }
+      ]
+    },
+    {
+      "title": "Error Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 8, "x": 8, "y": 8 },
+      "targets": [
+        {
+          "expr": "rate(prediction_errors_total[5m])",
+          "legendFormat": "errors/sec"
+        }
+      ]
+    },
+    {
+      "title": "Throughput (predictions/sec)",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 8, "x": 16, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(predictions_total[5m]))",
+          "legendFormat": "pred/sec"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["mlops", "sentiment-api"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "title": "Model Serving - Sentiment API",
+  "uid": "sentiment-api-dashboard"
+}

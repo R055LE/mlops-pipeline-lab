@@ -1,0 +1,25 @@
+loki:
+  auth_enabled: false
+  storage:
+    type: filesystem
+  commonConfig:
+    replication_factor: 1
+
+singleBinary:
+  replicas: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 250m
+      memory: 256Mi
+
+monitoring:
+  selfMonitoring:
+    enabled: false
+  lokiCanary:
+    enabled: false
+
+test:
+  enabled: false

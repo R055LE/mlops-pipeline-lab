@@ -1,0 +1,39 @@
+server:
+  retention: 7d
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  scrapeInterval: 15s
+
+serverFiles:
+  prometheus.yml:
+    scrape_configs:
+      - job_name: sentiment-api
+        kubernetes_sd_configs:
+          - role: pod
+            namespaces:
+              names: [ml-serving]
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_scrape]
+            action: keep
+            regex: "true"
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_port]
+            action: replace
+            target_label: __address__
+            regex: (.+)
+            replacement: ${1}:$1
+          - source_labels: [__meta_kubernetes_pod_annotation_prometheus_io_path]
+            action: replace
+            target_label: __metrics_path__
+            regex: (.+)
+
+alertmanager:
+  enabled: false
+
+pushgateway:
+  enabled: false

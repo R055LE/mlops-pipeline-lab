@@ -1,0 +1,40 @@
+adminUser: admin
+adminPassword: admin
+
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server.monitoring.svc:80
+        access: proxy
+        isDefault: true
+      - name: Loki
+        type: loki
+        url: http://loki.monitoring.svc:3100
+        access: proxy
+
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboardsConfigMaps:
+  default: grafana-dashboards
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 250m
+    memory: 256Mi
