@@ -43,10 +43,13 @@ jobs:
 
       - name: Set image tag
         id: meta
-        run: echo "tag=${{ env.IMAGE_NAME }}:$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+        run: |
+          IMAGE=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
+          echo "tag=$IMAGE:$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
 
       - name: Build image
-        run: docker build -f docker/Dockerfile -t ${{ steps.meta.outputs.tag }} -t ${{ env.IMAGE_NAME }}:latest .
+        run: docker build -f docker/Dockerfile -t ${{ steps.meta.outputs.tag }} -t ${{ steps.meta.outputs.image }}:latest .
 
       - name: Trivy vulnerability scan
         uses: aquasecurity/trivy-action@v0.35.0
@@ -81,4 +84,4 @@ jobs:
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           docker push ${{ steps.meta.outputs.tag }}
-          docker push ${{ env.IMAGE_NAME }}:latest
+          docker push ${{ steps.meta.outputs.image }}:latest
