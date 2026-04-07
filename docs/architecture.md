@@ -85,6 +85,12 @@ K8s `runAsNonRoot` cannot verify non-root status when the image specifies a name
 ### Trivy gate on CRITICAL only
 The `python:3.12-slim` base image carries HIGH-severity CVEs (e.g., ncurses `CVE-2025-69720`) that are upstream and not patchable at the application level. Gating on CRITICAL avoids false-positive pipeline failures while still catching genuinely dangerous vulnerabilities.
 
+### Traefik ingress (K3s default)
+K3s ships with Traefik as the default ingress controller, not nginx. The ingress manifest uses `ingressClassName: traefik` accordingly. On clusters with nginx-ingress, this would need to change.
+
+### WSL2 pod egress via host proxy
+WSL2 in host networking mode breaks the pod → internet forwarding path. K3s flannel routes pod traffic through cni0 → flannel.1 → eth0, but WSL2's host networking shim doesn't forward the pod CIDR (10.42.0.0/16) to the outside world. A tinyproxy instance on the host bridges this gap — pods reach the host at 10.42.0.1:8888, and the host forwards to the internet. This is a WSL2-specific workaround; on a standard Linux host or cloud cluster, pod egress works natively.
+
 ### HPA scaling strategy
 Horizontal Pod Autoscaler scales from 2 to 5 replicas based on CPU utilization (70% threshold). The floor of 2 ensures availability during rolling updates. CPU is the right scaling signal for CPU-bound inference workloads.
 

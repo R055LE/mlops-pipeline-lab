@@ -93,11 +93,57 @@ kubectl run curl-test --rm -i --restart=Never \
 
 ```bash
 kubectl create namespace argocd
-kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+kubectl apply -n argocd -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml --server-side --force-conflicts
+```
+
+**Note:** The `--server-side --force-conflicts` flags are required because ArgoCD's CRDs exceed the 262KB annotation limit for client-side apply.
+
+Get the initial admin password:
+
+```bash
+kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d && echo
+```
+
+### WSL2 host networking: outbound proxy
+
+WSL2 in host networking mode breaks pod-to-internet routing. K3s pods can reach the host (`10.42.0.1`) but not external endpoints. A forward proxy on the host bridges this gap.
+
+Install and configure tinyproxy:
+
+```bash
+sudo apt-get install -y tinyproxy
+# Allow the pod CIDR
+sudo sed -i 's/^Allow 127.0.0.1/Allow 127.0.0.1\nAllow 10.42.0.0\/16/' /etc/tinyproxy/tinyproxy.conf
+sudo systemctl restart tinyproxy
+```
+
+Configure ArgoCD to use the proxy:
+
+```bash
+PROXY_ENV="HTTPS_PROXY=http://10.42.0.1:8888 HTTP_PROXY=http://10.42.0.1:8888"
+NO_PROXY="NO_PROXY=10.42.0.0/16,10.43.0.0/16,localhost,127.0.0.1,argocd-redis,argocd-repo-server,argocd-dex-server,argocd-server"
+
+kubectl set env deployment/argocd-repo-server -n argocd $PROXY_ENV $NO_PROXY
+kubectl set env deployment/argocd-server -n argocd $PROXY_ENV $NO_PROXY
+kubectl set env statefulset/argocd-application-controller -n argocd $PROXY_ENV $NO_PROXY
+```
+
+**Note:** This proxy is only needed on WSL2 with host networking. On a standard Linux host, VM, or cloud cluster, K3s pod egress works natively.
+
+### Apply the ArgoCD application
+
+```bash
 kubectl apply -f argocd/application.yml
 ```
 
-Once installed, ArgoCD watches the `k8s/` directory and auto-syncs changes on push to `main`.
+Verify sync status:
+
+```bash
+kubectl get app -n argocd sentiment-api -o wide
+# → Synced, Healthy
+```
+
+Once synced, ArgoCD watches the `k8s/` directory and auto-syncs changes on push to `main` (default polling interval: 3 minutes).
 
 ## 5. Deploy Monitoring Stack
 

@@ -96,7 +96,7 @@ mlops-pipeline-lab/
 │   ├── namespace.yml       # ml-serving namespace
 │   ├── deployment.yml      # Hardened deployment (non-root, read-only fs, resource limits)
 │   ├── service.yml         # ClusterIP service
-│   ├── ingress.yml         # Nginx ingress
+│   ├── ingress.yml         # Traefik ingress (K3s default)
 │   └── hpa.yml             # Horizontal Pod Autoscaler (2-5 replicas)
 ├── argocd/
 │   └── application.yml     # ArgoCD GitOps application
@@ -125,6 +125,9 @@ mlops-pipeline-lab/
 | Image name lowercased in CI | GHCR requires lowercase repository names. GitHub's `${{ github.repository }}` preserves case, so the pipeline normalizes it. |
 | Numeric `runAsUser: 999` in K8s | K8s `runAsNonRoot` cannot verify non-root status with named users (e.g., `appuser`). Numeric UID resolves this. |
 | `TRANSFORMERS_OFFLINE=1` | Prevents the transformers library from attempting network calls at runtime, enforcing use of the baked-in model cache. |
+| Traefik ingress class | K3s ships Traefik as the default ingress controller. Manifests use `ingressClassName: traefik` accordingly. |
+| WSL2 host proxy for pod egress | WSL2 host networking breaks pod-to-internet routing. A tinyproxy on the host bridges the gap. Not needed on standard Linux or cloud clusters. |
+| `--server-side --force-conflicts` for ArgoCD CRDs | ArgoCD CRDs exceed the 262KB annotation limit for client-side `kubectl apply`. Server-side apply bypasses this. |
 
 ## Related Projects
 
