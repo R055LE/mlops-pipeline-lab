@@ -12,7 +12,7 @@ datasources:
         isDefault: true
       - name: Loki
         type: loki
-        url: http://loki.monitoring.svc:3100
+        url: http://loki-gateway.monitoring.svc:80
         access: proxy
 
 dashboardProviders:
@@ -29,7 +29,7 @@ dashboardProviders:
           path: /var/lib/grafana/dashboards/default
 
 dashboardsConfigMaps:
-  default: grafana-dashboards
+  default: grafana-model-serving
 
 resources:
   requests:
