@@ -111,3 +111,42 @@ The Grafana dashboard (`monitoring/grafana/dashboards/model-serving.json`) visua
 - Prediction distribution pie chart
 - Error rate
 - Throughput stat panel
+
+## Observability Stack
+
+| Component | Helm Chart | Purpose |
+|-----------|-----------|---------|
+| Prometheus | `prometheus-community/prometheus` | Scrapes `/metrics` from sentiment-api pods via pod annotations |
+| Grafana | `grafana/grafana` | Dashboards for model serving metrics, datasources for Prometheus and Loki |
+| Loki | `grafana/loki` (SingleBinary mode) | Log aggregation from model serving pods |
+
+**Disabled components:**
+- `prometheus-node-exporter` — incompatible with WSL2 mount propagation
+- `alertmanager` — not needed for this demo
+- `prometheus-pushgateway` — app pushes metrics via scrape, not push
+
+Prometheus discovers sentiment-api pods via Kubernetes SD with pod annotation relabeling:
+- `prometheus.io/scrape: "true"` — opt-in to scraping
+- `prometheus.io/port: "8000"` — target port
+- `prometheus.io/path: /metrics` — metrics endpoint path
+
+## Policy Enforcement
+
+Kyverno runs as an admission controller, intercepting pod creation requests and validating them against cluster policies before they reach the API server.
+
+All four policies target the `ml-serving` namespace and use `validationFailureAction: Enforce`:
+
+| Policy | Rule | Validates |
+|--------|------|-----------|
+| `require-vulnerability-scan` | `check-image-registry` | Image matches `ghcr.io/r055le/*` |
+| `require-sbom-annotation` | `check-sbom-annotation` | Pod has `sbom/generated: "true"` annotation |
+| `require-non-root` | `check-run-as-non-root` | Pod `runAsNonRoot: true`, containers `allowPrivilegeEscalation: false` |
+| `require-resource-limits` | `check-resource-limits` | Containers have CPU and memory requests and limits |
+
+### How policies connect to CI
+
+The policies create a closed loop with the CI pipeline:
+1. **CI** scans the image with Trivy and generates an SBOM with Syft
+2. **CI** pushes the scanned image to `ghcr.io/r055le/`
+3. **K8s deployment** sets `sbom/generated: "true"` annotation, `runAsNonRoot`, resource limits
+4. **Kyverno** validates all of the above at admission time — unscanned images, missing SBOMs, root containers, or unbounded resources are rejected

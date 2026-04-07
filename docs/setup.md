@@ -164,14 +164,45 @@ helm install loki grafana/loki \
   -n monitoring -f monitoring/loki/values.yml
 ```
 
-Default Grafana credentials: `admin` / `admin`.
+Create the Grafana dashboard ConfigMap and upgrade to load it:
 
-The Grafana dashboard (`monitoring/grafana/dashboards/model-serving.json`) shows:
+```bash
+kubectl create configmap grafana-model-serving -n monitoring \
+  --from-file=model-serving.json=monitoring/grafana/dashboards/model-serving.json
+
+helm upgrade grafana grafana/grafana -n monitoring -f monitoring/grafana/values.yml
+```
+
+### Access Grafana
+
+```bash
+kubectl port-forward -n monitoring svc/grafana 3000:80
+# → http://localhost:3000 (admin / admin)
+```
+
+The "Model Serving - Sentiment API" dashboard shows:
 - Request rate to `/predict`
 - Request latency percentiles (p50/p95/p99)
 - Predictions by label (POSITIVE/NEGATIVE pie chart)
 - Error rate
 - Throughput (predictions/sec)
+
+### Verify Prometheus scraping
+
+```bash
+kubectl port-forward -n monitoring svc/prometheus-server 9090:80
+# → http://localhost:9090
+```
+
+Check that sentiment-api targets are up:
+
+```bash
+curl -s 'http://localhost:9090/api/v1/query' \
+  --data-urlencode 'query=up{job="sentiment-api"}'
+# Both pods should show value "1"
+```
+
+**Note:** `prometheus-node-exporter` is disabled. WSL2 doesn't support the mount propagation it requires, and it's not needed — app metrics come from the `/metrics` endpoint directly.
 
 ## 6. Install Kyverno Policies
 
@@ -181,11 +212,33 @@ helm install kyverno kyverno/kyverno -n kyverno --create-namespace
 kubectl apply -f policies/
 ```
 
-Policies enforce in the `ml-serving` namespace:
-- Images must come from `ghcr.io/r055le/`
-- Pods must have `sbom/generated: "true"` annotation
-- `runAsNonRoot: true` and `allowPrivilegeEscalation: false` required
-- CPU and memory resource limits/requests required
+Verify all policies are ready:
+
+```bash
+kubectl get clusterpolicies
+# All four should show READY: True
+```
+
+### Test enforcement
+
+Try deploying a non-compliant pod — it should be rejected:
+
+```bash
+kubectl run test --image=nginx -n ml-serving
+# Error: blocked by require-non-root, require-resource-limits,
+#        require-sbom-annotation, require-vulnerability-scan
+```
+
+### Policies enforced
+
+| Policy | What it enforces |
+|--------|-----------------|
+| `require-vulnerability-scan` | Images must come from `ghcr.io/r055le/` |
+| `require-sbom-annotation` | Pods must have `sbom/generated: "true"` annotation |
+| `require-non-root` | `runAsNonRoot: true` and `allowPrivilegeEscalation: false` |
+| `require-resource-limits` | CPU and memory requests/limits required |
+
+All policies use `validationFailureAction: Enforce` — violations are rejected at admission, not just audited.
 
 ## DNS (for Ingress)
 

@@ -128,6 +128,41 @@ mlops-pipeline-lab/
 | Traefik ingress class | K3s ships Traefik as the default ingress controller. Manifests use `ingressClassName: traefik` accordingly. |
 | WSL2 host proxy for pod egress | WSL2 host networking breaks pod-to-internet routing. A tinyproxy on the host bridges the gap. Not needed on standard Linux or cloud clusters. |
 | `--server-side --force-conflicts` for ArgoCD CRDs | ArgoCD CRDs exceed the 262KB annotation limit for client-side `kubectl apply`. Server-side apply bypasses this. |
+| Kyverno Enforce mode | Policies use `validationFailureAction: Enforce` to actively block non-compliant pods, not just audit. Violations are rejected at admission time. |
+| `sbom/generated` annotation on pods | Bridges the CI SBOM artifact (Syft output) with in-cluster policy enforcement. Kyverno verifies the annotation exists before admitting pods. |
+| Node exporter disabled | WSL2 doesn't support the mount propagation required by `prometheus-node-exporter`. Disabled in Prometheus values; not needed for app-level metrics. |
+| Loki SingleBinary mode | Minimal footprint for local development. Scales to SimpleScalable or Microservices mode for production workloads. |
+
+## Policy Enforcement
+
+Kyverno policies enforce the following in the `ml-serving` namespace:
+
+| Policy | Enforcement | What it blocks |
+|--------|------------|----------------|
+| `require-vulnerability-scan` | Images must come from `ghcr.io/r055le/` | Unscanned or untrusted images |
+| `require-sbom-annotation` | Pods must have `sbom/generated: "true"` | Deployments without SBOM verification |
+| `require-non-root` | `runAsNonRoot: true` + `allowPrivilegeEscalation: false` | Root containers or privilege escalation |
+| `require-resource-limits` | CPU and memory requests/limits required | Unbounded resource consumption |
+
+All policies run in **Enforce** mode — violations are rejected at admission, not just logged.
+
+Example rejection:
+
+```
+$ kubectl run test --image=nginx -n ml-serving
+Error from server: admission webhook "validate.kyverno.svc-fail" denied the request:
+
+resource Pod/ml-serving/test was blocked due to the following policies
+
+require-non-root:
+  check-run-as-non-root: 'Containers must set runAsNonRoot to true.'
+require-resource-limits:
+  check-resource-limits: 'Containers must have CPU and memory resource limits.'
+require-sbom-annotation:
+  check-sbom-annotation: 'Pods must have annotation sbom/generated: true.'
+require-vulnerability-scan:
+  check-image-registry: 'Images must be from ghcr.io/r055le/.'
+```
 
 ## Related Projects
 
