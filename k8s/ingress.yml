@@ -3,10 +3,8 @@ kind: Ingress
 metadata:
   name: sentiment-api
   namespace: ml-serving
-  annotations:
-    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
-  ingressClassName: nginx
+  ingressClassName: traefik
   rules:
     - host: sentiment.local
       http:
