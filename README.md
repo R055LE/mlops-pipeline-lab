@@ -11,7 +11,7 @@ The same infrastructure rigor applied to traditional workloads — container har
 ## What This Demonstrates
 
 - **Model Serving**: FastAPI wrapping `distilbert-base-uncased-finetuned-sst-2-english` with `/predict`, `/health`, `/metrics` endpoints
-- **Container Hardening**: Multi-stage Docker build, non-root execution (UID 999), read-only filesystem, dropped capabilities, model baked into image for offline operation
+- **Container Hardening**: Multi-stage Docker build, distroless non-root execution (UID 65532), read-only filesystem, dropped capabilities, model baked into image for offline operation
 - **CI/CD Pipeline**: GitHub Actions with lint → test → build → Trivy scan → Syft SBOM → GHCR push
 - **GitOps**: ArgoCD auto-syncing Kubernetes manifests from this repo
 - **Observability**: Prometheus metrics (request latency histograms, prediction counters, error counters), Grafana dashboards, Loki log aggregation
@@ -121,9 +121,9 @@ mlops-pipeline-lab/
 |----------|-----------|
 | Model baked into Docker image | Containers must run offline — no runtime downloads from HuggingFace. Ensures reproducibility and removes external dependency at deploy time. |
 | CPU-only inference | Infrastructure patterns are the focus, not GPU optimization. Keeps the project runnable on any machine. |
-| Trivy gate on CRITICAL only | HIGH-severity CVEs in upstream `python:3.12-slim` (e.g., ncurses) are not actionable. CRITICAL gate avoids false-positive pipeline failures. |
+| Trivy gate on CRITICAL only | CRITICAL findings block publishing. HIGH findings remain visible for review and base-image maintenance. |
 | Image name lowercased in CI | GHCR requires lowercase repository names. GitHub's `${{ github.repository }}` preserves case, so the pipeline normalizes it. |
-| Numeric `runAsUser: 999` in K8s | K8s `runAsNonRoot` cannot verify non-root status with named users (e.g., `appuser`). Numeric UID resolves this. |
+| Numeric `runAsUser: 65532` in K8s | Matches distroless's built-in `nonroot` identity, so K8s can verify the image never runs as root. |
 | `TRANSFORMERS_OFFLINE=1` | Prevents the transformers library from attempting network calls at runtime, enforcing use of the baked-in model cache. |
 | Traefik ingress class | K3s ships Traefik as the default ingress controller. Manifests use `ingressClassName: traefik` accordingly. |
 | WSL2 host proxy for pod egress | WSL2 host networking breaks pod-to-internet routing. A tinyproxy on the host bridges the gap. Not needed on standard Linux or cloud clusters. |
