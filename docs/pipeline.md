@@ -20,14 +20,14 @@ Two jobs run sequentially: `lint-and-test` must pass before `build-scan-push` be
 ### Build
 - Multi-stage Docker build from `docker/Dockerfile`
 - Model is downloaded and baked into the image during build (not at runtime)
-- Non-root execution (UID 999), slim base image
+- Distroless non-root execution (UID 65532)
 - Tagged with both git short SHA and `latest`
 - Image name is lowercased at build time — GHCR requires lowercase, but `${{ github.repository }}` preserves GitHub's case
 
 ### Trivy Scan (Security Gate)
 - Scans the built image for **CRITICAL** severity vulnerabilities
 - Pipeline fails with exit code 1 if any are found
-- HIGH severity is reported but does not gate — upstream `python:3.12-slim` carries HIGH CVEs (e.g., ncurses) that are not actionable at the application level
+- HIGH severity remains visible for review; CRITICAL findings block publishing
 
 ### SBOM Generation
 - **Syft** generates an SPDX SBOM from the built image

@@ -252,7 +252,9 @@ Add to `/etc/hosts`:
 
 ### `CreateContainerConfigError: image has non-numeric user`
 
-K8s `runAsNonRoot` can't verify non-root status with named users like `appuser`. The deployment uses `runAsUser: 999` (the numeric UID of `appuser` in the image) to resolve this.
+K8s `runAsNonRoot` can't verify non-root status from a name alone. The
+deployment uses `runAsUser: 65532`, the numeric UID of distroless's built-in
+`nonroot` identity.
 
 ### Pods crash-loop on `/predict` but `/health` works
 

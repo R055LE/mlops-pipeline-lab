@@ -75,15 +75,20 @@ The model (`distilbert-base-uncased-finetuned-sst-2-english`) runs on CPU. The i
 
 ### Security at every layer
 - **Build time:** Trivy scans for CRITICAL CVEs (gate), Syft generates SBOM
-- **Container:** Non-root (UID 999), read-only root filesystem, all capabilities dropped, no privilege escalation
+- **Container:** Distroless, non-root (UID 65532), read-only root filesystem, all capabilities dropped, no privilege escalation
 - **Cluster:** Kyverno policies enforce scanned images, SBOM annotations, non-root, and resource limits
 - **K8s:** seccomp RuntimeDefault profile, emptyDir volumes for `/tmp` and `/app/.cache` (required by read-only root filesystem)
 
 ### Numeric UID in K8s security context
-K8s `runAsNonRoot` cannot verify non-root status when the image specifies a named user (e.g., `USER appuser`). The deployment sets `runAsUser: 999` explicitly — the numeric UID assigned to `appuser` during image build — to satisfy this check.
+K8s `runAsNonRoot` cannot verify non-root status from a name alone. The
+deployment sets `runAsUser: 65532` explicitly, matching distroless's built-in
+`nonroot` identity.
 
 ### Trivy gate on CRITICAL only
-The `python:3.12-slim` base image carries HIGH-severity CVEs (e.g., ncurses `CVE-2025-69720`) that are upstream and not patchable at the application level. Gating on CRITICAL avoids false-positive pipeline failures while still catching genuinely dangerous vulnerabilities.
+The final image uses pinned Python 3.13 distroless rather than a general-purpose
+slim runtime. This removes the package manager, shell, and the Perl packages
+that previously kept the CRITICAL gate red. CRITICAL findings still block the
+pipeline; HIGH findings remain visible for review.
 
 ### Traefik ingress (K3s default)
 K3s ships with Traefik as the default ingress controller, not nginx. The ingress manifest uses `ingressClassName: traefik` accordingly. On clusters with nginx-ingress, this would need to change.
