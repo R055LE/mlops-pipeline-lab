@@ -1,4 +1,4 @@
-# CLAUDE.md — mlops-pipeline-lab
+# AGENTS.md: mlops-pipeline-lab
 
 ## Project Overview
 
@@ -21,7 +21,11 @@ A production-grade MLOps deployment pipeline that takes a pre-trained HuggingFac
 - Prometheus metrics instrumented directly in the app (request latency histograms, prediction counters, error counters)
 
 ### Container Build
-- Hardened Dockerfile: multi-stage build, distroless or python-slim final image
+- Multi-stage build with a pinned Python 3.13 slim builder and pinned Python
+  3.13 distroless nonroot runtime
+- Install PyTorch from the official CPU-only index; CUDA dependencies do not
+  belong in this image
+- Bake the model into the image and keep runtime inference offline
 - Non-root execution
 - Trivy vulnerability scanning integrated into CI
 - Syft SBOM generation as build artifact
@@ -31,7 +35,8 @@ A production-grade MLOps deployment pipeline that takes a pre-trained HuggingFac
 - **GitHub Actions** (`.github/workflows/`) — primary, fully functional, runs on push
 - **GitLab CI** (`.gitlab-ci.yml`) — included as a functional reference config; tested against GitLab.com is a longer-term goal
 - Pipeline stages: lint → test → build → scan → push → deploy
-- Security scanning gate: pipeline fails if critical/high vulnerabilities found
+- Security scanning gate: CRITICAL findings block; HIGH findings stay visible
+  for review and base-image maintenance
 
 ### GitOps Deployment
 - ArgoCD application manifests watching the repo for changes
@@ -54,7 +59,7 @@ A production-grade MLOps deployment pipeline that takes a pre-trained HuggingFac
 
 ```
 mlops-pipeline-lab/
-├── CLAUDE.md
+├── AGENTS.md
 ├── README.md
 ├── LICENSE (MIT)
 ├── .github/
@@ -100,10 +105,10 @@ mlops-pipeline-lab/
 
 ## Tech Stack
 
-- **Language:** Python 3.11+
+- **Language:** Python 3.12+ locally and in CI; Python 3.13 in the image
 - **Framework:** FastAPI + Uvicorn
 - **ML:** HuggingFace Transformers (small CPU model, e.g. `distilbert-base-uncased-finetuned-sst-2-english`)
-- **Container:** Docker, multi-stage build, distroless/slim base
+- **Container:** Docker, Python 3.13 slim builder, Python 3.13 distroless runtime
 - **Registry:** GitHub Container Registry (ghcr.io)
 - **CI/CD:** GitHub Actions (primary), GitLab CI (reference config)
 - **Kubernetes:** K3s (local)
