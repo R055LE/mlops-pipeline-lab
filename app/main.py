@@ -2,10 +2,10 @@ import time
 
 from fastapi import FastAPI, Request
 from fastapi.responses import PlainTextResponse
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel
-from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 
-from app.metrics import REQUEST_LATENCY, PREDICTION_COUNT, REQUEST_COUNT, ERROR_COUNT
+from app.metrics import ERROR_COUNT, PREDICTION_COUNT, REQUEST_COUNT, REQUEST_LATENCY
 from app.model import predict
 
 app = FastAPI(title="MLOps Sentiment Analysis API", version="1.0.0")
@@ -47,9 +47,9 @@ async def predict_endpoint(req: PredictRequest):
         result = predict(req.text)
         PREDICTION_COUNT.labels(label=result["label"]).inc()
         return result
-    except Exception as e:
+    except Exception:
         ERROR_COUNT.inc()
-        raise e
+        raise
 
 
 @app.get("/metrics", response_class=PlainTextResponse)
