@@ -46,7 +46,9 @@ The Docker build downloads and bakes the model into the image at build time. The
 
 **Note:** The build context can be large if `.venv/` exists locally. The `.dockerignore` excludes it, but ensure you're using it.
 
-**Note:** The image is ~3.2GB because PyTorch bundles CUDA libraries even for CPU-only usage. This is a known trade-off. A future optimization could use `torch` CPU-only wheels to reduce the image size significantly.
+**Note:** The Dockerfile installs PyTorch from its official CPU-only index, then
+copies the application and model into a distroless runtime. CUDA libraries and
+builder tooling do not ship in the final image.
 
 ## 3. Deploy to K3s
 
@@ -67,7 +69,8 @@ kubectl apply -f k8s/namespace.yml
 kubectl apply -f k8s/
 ```
 
-Wait for pods to be ready (image pull takes a while on first deploy due to the ~3.2GB image):
+Wait for pods to be ready. The first pull still includes the model baked into
+the image:
 
 ```bash
 kubectl get pods -n ml-serving -w

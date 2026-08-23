@@ -71,7 +71,9 @@ The HuggingFace model is downloaded during `docker build` and cached in the imag
 ### CPU-only inference
 The model (`distilbert-base-uncased-finetuned-sst-2-english`) runs on CPU. The infrastructure patterns are the focus, not GPU optimization. This keeps the project runnable on any machine without CUDA or GPU hardware.
 
-**Trade-off:** PyTorch bundles CUDA libraries even for CPU-only usage, resulting in a ~3.2GB image. A future optimization could use CPU-only wheels from `https://download.pytorch.org/whl/cpu` to significantly reduce image size.
+The Docker build installs PyTorch from its official CPU-only index. CUDA
+libraries never enter the image, and only the installed application and model
+are copied from the builder into the distroless runtime.
 
 ### Security at every layer
 - **Build time:** Trivy scans for CRITICAL CVEs (gate), Syft generates SBOM
